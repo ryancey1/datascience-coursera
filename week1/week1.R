@@ -9,7 +9,7 @@ class(x)
 
 # 5. What is the class of the object defined by the expression x <- c(4, "a", TRUE)?
 x <- c(4, "a", TRUE)
-class(x)
+class(x) 
 
 # 6. If I have two vectors x <- c(1,3, 5) and y <- c(3, 2, 10), what is produced by the expression rbind(x, y)?
 x <- c(1,3, 5)
