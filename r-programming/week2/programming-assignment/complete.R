@@ -2,7 +2,7 @@ complete <- function(directory, id = 1:332) {
      ## generate sub-setted list of filepaths
      files <- list.files(directory, full.names = TRUE)[id]
      
-     ## storage vectors for ids and nobs
+     ## storage vectors for nobs
      nobs <- vector(mode = "numeric", length = length(id))
      
      ## reads CSV file, calculates complete cases, adds to storage
