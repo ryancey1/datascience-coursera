@@ -19,7 +19,7 @@ rankall <- function(outcome, num = "best") {
         
         ## Splits and subsets
         byState <- split(data, data$State)
-        ranks <- c()
+        stateRanks <- c()
         ## Subsets by outcome, sorts in ascending order, omit NAs
         for(i in seq_along(valid.states)) {
                 if(outcome == valid.outcomes[1]) {
@@ -40,14 +40,18 @@ rankall <- function(outcome, num = "best") {
                 ## Return NA if num > number of hosps.
                 if(num == "best") {
                         rank <- 1
+                        stateRanks <- c(stateRanks, sorted[rank, 1])
                 } else if(num == "worst") {
                         rank <- nrow(sorted)
+                        stateRanks <- c(stateRanks, sorted[rank, 1])
                 } else if(num > nrow(sorted)) {
-                        return(NA)
+                        stateRanks <- c(stateRanks, NA)
                 } else {
                         rank <- num
+                        stateRanks <- c(stateRanks, sorted[rank, 1])
                 }
-                ranks <- c(ranks, sorted[rank, 1])
         }
-        data.frame(hospital = ranks, state = valid.states)
+        data.frame(hospital = stateRanks, 
+                   state = valid.states, 
+                   row.names = valid.states)
 }
