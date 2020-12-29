@@ -1,7 +1,53 @@
 rankall <- function(outcome, num = "best") {
         ## Read outcome data
-        ## Check that state and outcome are valid
-        ## For each state, find the hospital of the given rank
-        ## Return a data frame with the hospital names and the
-        ## (abbreviated) state name
+        data <- list.files("r-programming/week4/rprog_data_ProgAssignment3-data",
+                           full.names = TRUE, pattern = ".csv")
+        data <- read.csv(data[2])[c(2,7,11,17,23)]
+        
+        ## Coerces data columns to numeric, suppress warnings
+        suppressWarnings(for(i in 3:5) {
+                data[,i] <- as.numeric(data[,i])
+        })   
+        
+        ## Check that outcome is valid
+        valid.states <- sort(unique(data$State))
+        valid.outcomes <- c("heart attack", "heart failure", "pneumonia")
+        
+        if(!any(outcome == valid.outcomes)) {
+                stop("invalid outcome")
+        }
+        
+        ## Splits and subsets
+        byState <- split(data, data$State)
+        ranks <- c()
+        ## Subsets by outcome, sorts in ascending order, omit NAs
+        for(i in seq_along(valid.states)) {
+                if(outcome == valid.outcomes[1]) {
+                        sorted <- byState[[valid.states[i]]]
+                        sorted <- sorted[,c(1,3)]
+                        sorted <- sorted[order(sorted[,2], sorted[,1], na.last = NA), ]
+                } else if(outcome == valid.outcomes[2]) {
+                        sorted <- byState[[valid.states[i]]]
+                        sorted <- sorted[,c(1,4)]
+                        sorted <- sorted[order(sorted[,2], sorted[,1], na.last = NA), ]
+                } else if(outcome == valid.outcomes[3]) {
+                        sorted <- byState[[valid.states[i]]]
+                        sorted <- sorted[,c(1,5)]
+                        sorted <- sorted[order(sorted[,2], sorted[,1], na.last = NA), ]
+                }
+                
+                ## Set the value of num based on input. 
+                ## Return NA if num > number of hosps.
+                if(num == "best") {
+                        rank <- 1
+                } else if(num == "worst") {
+                        rank <- nrow(sorted)
+                } else if(num > nrow(sorted)) {
+                        return(NA)
+                } else {
+                        rank <- num
+                }
+                ranks <- c(ranks, sorted[rank, 1])
+        }
+        data.frame(hospital = ranks, state = valid.states)
 }
