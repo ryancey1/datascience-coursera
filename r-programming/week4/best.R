@@ -15,8 +15,8 @@ best <- function(state, outcome) {
         })        
         
         ## Vectors of valid queries
-        valid.outcomes <- c("heart attack", "heart failure", "pneumonia")
         valid.states <- state.abb
+        valid.outcomes <- c("heart attack", "heart failure", "pneumonia")
         
         ## Checks that state and outcome are valid
         if(!any(state == valid.states)) {
@@ -33,15 +33,15 @@ best <- function(state, outcome) {
         ## Sorts subsetted data in ascending order 
         if(outcome == valid.outcomes[1]) {
                 sorted <- byState[,c(1,3)]
-                sorted <- sorted[order(sorted[,2], sorted[,1]), ]
+                sorted <- sorted[order(sorted[,2], sorted[,1], na.last = NA), ]
                 sorted <- sorted[1,1]
         } else if(outcome == valid.outcomes[2]) {
                 sorted <- byState[,c(1,4)]
-                sorted <- sorted[order(sorted[,2], sorted[,1]), ]
+                sorted <- sorted[order(sorted[,2], sorted[,1], na.last = NA), ]
                 sorted <- sorted[1,1]
         } else if(outcome == valid.outcomes[3]) {
                 sorted <- byState[,c(1,5)]
-                sorted <- sorted[order(sorted[,2], sorted[,1]), ]
+                sorted <- sorted[order(sorted[,2], sorted[,1], na.last = NA), ]
                 sorted <- sorted[1,1]
         }
         
