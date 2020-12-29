@@ -1,6 +1,6 @@
 rankhospital <- function(state, outcome, num = "best") {
         ## Read outcome data
-        data <- list.files("r-programming/week4/rprog_data_ProgAssignment3-data",
+        data <- list.files("rprog_data_ProgAssignment3-data",
                            full.names = TRUE, pattern = ".csv")
         data <- read.csv(data[2])[c(2,7,11,17,23)]
         
