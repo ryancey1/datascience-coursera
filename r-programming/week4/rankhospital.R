@@ -10,7 +10,7 @@ rankhospital <- function(state, outcome, num = "best") {
         })   
         
         ## Check that state and outcome are valid
-        valid.states <- state.abb
+        valid.states <- sort(unique(data$State))
         valid.outcomes <- c("heart attack", "heart failure", "pneumonia")
         if(!any(state == valid.states)) {
                 stop("invalid state")
