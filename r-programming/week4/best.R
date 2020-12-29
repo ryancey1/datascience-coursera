@@ -15,7 +15,7 @@ best <- function(state, outcome) {
         })        
         
         ## Vectors of valid queries
-        valid.states <- state.abb
+        valid.states <- sort(unique(data$State))
         valid.outcomes <- c("heart attack", "heart failure", "pneumonia")
         
         ## Checks that state and outcome are valid
