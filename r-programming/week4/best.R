@@ -1,8 +1,10 @@
 best <- function(state, outcome) {
-        ## Read and format outcome data
+        ## Read and format outcome data, keep desired columns
         data <- list.files("r-programming/week4/rprog_data_ProgAssignment3-data",
                            full.names = TRUE, pattern = ".csv")
         data <- read.csv(data[2])[c(2,7,11,17,23)]
+        
+        ## Coerce data columns to numeric, suppress warnings
         suppressWarnings(for(i in 3:5) {
                 data[,i] <- as.numeric(data[,i])
         })        
