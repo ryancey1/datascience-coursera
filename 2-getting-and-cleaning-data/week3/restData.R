@@ -4,9 +4,10 @@ if(!file.exists("data")) {
         dir.create("data")
 }
 
-url <- "https://data.baltimorecity.gov/api/views/k5ry-ef3g/rows.csv?accessType=DOWNLOAD"
-download.file(url, destfile = "data/restaurants.csv", method = "curl")
-
+if(!file.exists("data/restaurants.csv")){
+        url <- "https://data.baltimorecity.gov/api/views/k5ry-ef3g/rows.csv?accessType=DOWNLOAD"
+        download.file(url, destfile = "data/restaurants.csv")
+}
 restData <- read.csv("data/restaurants.csv", stringsAsFactors = TRUE)
 ## remove last 3 columns
 restData <- restData[, 1:6]
@@ -30,3 +31,7 @@ any(is.na(restData$councilDistrict))
 all(restData$zipCode > 0) ## "FALSE" due to negative zipcode
 colSums(is.na(restData)) ## checks for NAs across whole dataset
 all(colSums(is.na(restData)) == 0) 
+
+## can use %in% command to determine the number of specific variables
+table(restData$zipCode %in% c("21230"))
+table(restData$zipCode %in% c("21230", "21224"))
