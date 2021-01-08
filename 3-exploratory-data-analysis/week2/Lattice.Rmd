@@ -1,0 +1,95 @@
+---
+title: "Lattice"
+author: "Ryan Yancey"
+date: "1/7/2021"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Lattice Plotting System
+
+Implemented through `lattice` and `grid` packages.
+
+* `lattice` contains functions like `xyplot` `bwplot` and `levelplot`
+  + Unlike `base`, plots are made in a single function call.
+
+
+* `grid` is what `lattice` builds on top of. (It is rarely called independently).
+
+
+## Lattice Functions
+
+`xyplot` -- Scatterplots
+
+`bwplot` -- Box-and-whisker plots (box plot)
+
+`histogram` -- Histogram
+
+`stripplot` -- Similar to boxplot, but with points
+
+`dotplot` -- "Violin strings"
+
+`splom` -- Scatterplot matrix
+
+`levelplot`/`contourplot` -- Plots image data
+
+****
+
+**Lattice functions typically have a formula for their first argument.**
+
+`xyplot(y ~ x | f * g, data)`
+
+* y-axis variable, x-axis variable
+
+* f and g are "conditioning" variables (optional)
+
+  + They are categorical variables that will produce multiple plots
+
+## Simple Lattice Plot
+
+```{r plot, echo = TRUE}
+library(datasets)
+library(lattice)
+
+xyplot(Ozone ~ Wind, data = airquality)
+```
+
+## Another Lattice Plot
+
+```{r plot2, echo = TRUE}
+airquality <- transform(airquality, Month = factor(Month, labels = c("May", "June", "July", "Aug", "Sept")))
+
+xyplot(Ozone ~ Wind | Month, data = airquality, layout = c(5,1), main = "Ozone vs Wind in NY (1973)",
+       type = c("p","r"))
+```
+
+## Making fake data
+```{r makedata, echo = TRUE}
+set.seed(10)
+x <- rnorm(5000)
+f <- rep(0:4, each = 1000)
+y <- x + f - f * x + rnorm(5000, sd = 0.2)
+f <- factor(f, labels = c("Group 1", "Group 2", "Group 3", "Group 4", "Group 5"))
+```
+
+## Using fake data  in panel plot
+```{r xyplot, echo = TRUE}
+xyplot(y ~ x | f, layout = c(5,1))
+```
+
+## Lattice with custom panel functions
+```{r xyplot2, echo = TRUE}
+xyplot(y ~ x | f, layout = c(5,1), panel = function(x, y, ...){
+        panel.xyplot(x, y, ...)
+        panel.lmline(x, y, col = 2, lwd = 2)
+        panel.abline(h = mean(y), lty = 2)
+})
+```
+
+
+
+
+

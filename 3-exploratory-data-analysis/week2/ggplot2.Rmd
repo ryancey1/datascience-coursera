@@ -1,0 +1,116 @@
+---
+title: "ggplot2"
+author: "Ryan Yancey"
+date: "1/8/2021"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+* ggplot2 implements *Grammar of Graphics* by Leland Wilkinson
+
+* It is a "third" graphics system for R (alongside **base** and **lattice**)
+
+* Use `install.packages("ggplot2")` to install
+
+* [Better documentation](http://ggplot2.org)
+
+### What is ggplot2?
+
+* Since it's based on Wilkinson's book, its grammar represents abstractions of ideas/objects
+
+* Essentially, "verbs", "nouns", "adjectives" for graphics
+
+* "Shorten distance form mind to page"
+
+### Grammar of Graphics
+
+> "In brief, the grammar tells us that a statistical graphic is a **mapping** from data to aesthetic attributes (colour, shape, size) of **geometric** objects (points, lines, bars). The plot may also contain statistical transformations of the data and is drawn on a specific coordinate system" -- *ggplot2* book
+
+### The Basics: `qplot()`
+
+* Similar to `plot()` in the base graphics system.
+
+* Looks for data in data frame, or in the parent environment. But it is generally smarter to use a data frame so that when you're reading the code it's easier to see where the data came from.
+
+* It is really important to organize the data frame **before** plotting.
+
+* **Plots are made up of *aesthetics* (size, shape, color) and *geoms* (points, lines).**
+
+* Subsetting the data is shown *via* factors; They should be labeled with **informative** labels ('male' and 'female' rather than 1 and 2) and can be used to **annotate** the plot with various colors and levels.
+
+* `qplot()` hides what happens underneath in `ggplot` but it is fine for many applications.
+
+* `ggplot()` is the core function that may be used in many circumstances that `qplot()` cannot do.
+
+***
+
+# Example Dataset
+
+```{r ggplot loading}
+library(ggplot2)
+str(mpg)
+
+## Need to add factors since they are not loaded by default
+mpg <- transform(mpg, 
+                 manufacturer = factor(manufacturer),
+                 model = factor(model),
+                 trans = factor(trans),
+                 drv = factor(drv),
+                 fl = factor(fl),
+                 class = factor(class))
+
+str(mpg)
+```
+
+### ggplot2 "Hello world!" plot
+
+Here is a basic `qplot()` call for plotting highway mpg versus engine displacement.
+
+```{r helloworld}
+qplot(displ, hwy, data = mpg)
+```
+
+Now let's modify **aesthetics** based on factors... by drive type to be exact.
+
+```{r aesth}
+qplot(displ, hwy, data = mpg, color = drv)
+```
+
+As we can see, sub-grouping by drive train (drv variable) adds a layer to the data. It appears that 4wd cars tend to have lowest hwy mpg, and front wheel drive cars tend to have highest highway mpg. There also appears to be a negative correlation between hwy mpg and engine displacement (smaller engine volume yields higher highway mpg).
+
+### Adding a geom
+
+We can also add a summary geom (smoother to show overall trend).
+
+```{r geom}
+## We need to specify both smooth *AND* point to get normal plots + line
+qplot(displ, hwy, data = mpg, geom = c("smooth", "point"))
+
+```
+
+### Histograms
+
+Calling `qplot()` with only one variable makes a histogram (calling `fill` separates each bin into the drive type as well).
+
+```{r hist}
+qplot(hwy, data = mpg, fill = drv)
+```
+
+### Facets
+
+Another way to subset data is to use `facets` function.
+
+Facets are encoded by `facets = cols ~ rows` within a plot call.
+
+```{r facets1}
+qplot(displ, hwy, data = mpg, facets = . ~ drv)
+```
+
+```{r facets2}
+qplot(hwy, data = mpg, facets = drv ~ ., binwidth = 2)
+```
