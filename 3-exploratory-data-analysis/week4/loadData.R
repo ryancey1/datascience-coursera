@@ -1,9 +1,14 @@
-setwd("3-exploratory-data-analysis/week4")
-
 library(dplyr)
+library(ggplot2)
+
+setwd("3-exploratory-data-analysis/week4")
 
 if (!dir.exists("data")) {
     dir.create("data")
+}
+
+if(!dir.exists("plots")) {
+    dir.create("plots")
 }
 
 if (!file.exists("exdata_data_NEI_data.zip")) {
