@@ -31,6 +31,7 @@ if (!file.exists("exdata_data_NEI_data.zip")) {
 
 if (!file.exists("data/Source_Classification_Code.rds") &
     !file.exists("data/summarySCC_PM25.rds")) {
+    file = "exdata_data_NEI_data.zip"
     unzip(zipfile = file, exdir = "data/")
 }
 
@@ -41,35 +42,28 @@ if (!any(ls() == "SCC"))
     SCC <- readRDS(file = "data/Source_Classification_Code.rds")
 
 # PLOT --------------------------------------------------------------------
-## filter data frame for base plot
-NEI %>%
-        select(fips, Emissions, year) %>%
+# prepare data frame and variables for plot
+plot <- NEI %>%
         filter(fips == "24510") %>%
+        select(Emissions, year) %>%
         group_by(year) %>%
-        summarize(across(.cols = Emissions, .fns = sum), .groups = "keep") -> result
+        summarize(across(.fns = sum), .groups = "keep")
+colors = c("red", "blue", "purple", "green")
+lm <- lm(Emissions ~ year, data = plot)
 
-## base plot
-png(filename = "plots/plot2.png")
-
-plot(
+# plot to PNG
+png("plots/plot2.png")
+bar <- barplot(
     Emissions ~ year,
-    data = result,
-    type = "o",
-    pch = 16,
-    lty = 3,
-    xlab = "Year",
-    ylab = "PM2.5 Emissions (ton)",
-    main = "Yearly Total PM2.5 Emissions in Baltimore, MD"
+    data = plot,
+    col = colors,
+    ylab = "PM2.5 Emissions (tons)",
+    xlab = "",
+    main = "Total PM2.5 Emissions in Baltimore, MD\n(1999 - 2008)"
 )
-
-## add regression line to plot
-abline(
-    lm(Emissions ~ year, result),
-    col = "red",
-    lty = 1,
-    lwd = 1
-)
-
+lines(x = bar, y = lm$fitted.values, lty = 3, lwd = 2, col = "black")
+legend("topright", legend = "Linear Regression", lty = 3, lwd = 2, col = "black", cex = 0.7, bty = "o")
+text(x = bar, y = plot$Emissions - 1000, labels = as.integer(plot$Emissions), cex = 0.8)
 dev.off()
 
 ## clean up working environment

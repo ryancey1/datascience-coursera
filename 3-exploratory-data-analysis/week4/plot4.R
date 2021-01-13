@@ -30,6 +30,7 @@ if (!file.exists("exdata_data_NEI_data.zip")) {
 
 if (!file.exists("data/Source_Classification_Code.rds") &
     !file.exists("data/summarySCC_PM25.rds")) {
+    file = "exdata_data_NEI_data.zip"
     unzip(zipfile = file, exdir = "data/")
 }
 
@@ -58,18 +59,17 @@ NEI_SCC$year <- factor(NEI_SCC$year)
 
 ## ggplot2
 g <- ggplot(NEI_SCC, aes(year, Emissions, fill = type)) +
-    theme_bw() +
     geom_col(show.legend = FALSE) +
     facet_wrap(. ~ type, scale = "free") +
     ylab("Emissions (tons)") +
     xlab("Years") +
-    ggtitle("Yearly Coal-Combustion PM2.5 Emissions in the United States") +
+    ggtitle("PM2.5 Emissions in the United States\nCoal Sources (1999 - 2008)") +
     theme(plot.title = element_text(hjust = 0.5)) +
     geom_smooth(
         aes(as.integer(year), Emissions),
         method = "lm",
         se = FALSE,
-        color = "red",
+        color = "black",
         formula = "y ~ x",
         show.legend = FALSE
     )

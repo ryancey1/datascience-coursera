@@ -33,6 +33,7 @@ if (!file.exists("exdata_data_NEI_data.zip")) {
 
 if (!file.exists("data/Source_Classification_Code.rds") &
     !file.exists("data/summarySCC_PM25.rds")) {
+    file = "exdata_data_NEI_data.zip"
     unzip(zipfile = file, exdir = "data/")
 }
 
@@ -44,29 +45,28 @@ if (!any(ls() == "SCC"))
 
 # PLOT --------------------------------------------------------------------
 ## prepare data frame for ggplot2
-NEI %>%
+pm25_baltimore <- NEI %>%
         select(fips, Emissions, type, year) %>%
         filter(fips == "24510") %>%
         group_by(year, type) %>%
         summarize(across(.cols = Emissions, .fns = sum),
-                  .groups = "keep") -> pm25_baltimore
+                  .groups = "keep")
 pm25_baltimore$year <- factor(pm25_baltimore$year)
 
 ## ggplot2
 g <-
     ggplot(pm25_baltimore, aes(x = year, y = Emissions, fill = type)) +
-    theme_bw() +
     geom_col(show.legend = FALSE) +
     facet_wrap(. ~ type, scale = "free", nrow = 1) +
-    xlab("Year") +
+    xlab("Years") +
     ylab("Emissions (tons)") +
-    ggtitle("Yearly Source-Separated Total PM2.5 Emissions in Baltimore, MD") +
+    ggtitle("PM2.5 Emissions in Baltimore, MD\n(1999 - 2008)") +
     theme(plot.title = element_text(hjust = 0.5)) +
     geom_smooth(
         aes(x = as.integer(year), y = Emissions),
         method = "lm",
         se = FALSE,
-        color = "red",
+        color = "black",
         formula = "y ~ x",
         show.legend = FALSE
     )

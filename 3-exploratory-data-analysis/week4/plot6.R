@@ -32,6 +32,7 @@ if (!file.exists("exdata_data_NEI_data.zip")) {
 
 if (!file.exists("data/Source_Classification_Code.rds") &
     !file.exists("data/summarySCC_PM25.rds")) {
+    file = "exdata_data_NEI_data.zip"
     unzip(zipfile = file, exdir = "data/")
 }
 
@@ -58,18 +59,17 @@ pm25_veh_baltimore$year <- factor(pm25_veh_baltimore$year)
 
 ## ggplot2
 g <- ggplot(pm25_veh_baltimore, aes(year, Emissions, fill = fips)) +
-    theme_bw() +
     geom_col(show.legend = FALSE) +
     facet_wrap(. ~ fips, scale = "free_y") +
     ylab("Emissions (tons)") +
     xlab("Years") +
-    ggtitle("Yearly Motor Vehicle PM2.5 Emissions in Baltimore and Los Angeles") +
+    ggtitle("PM2.5 Emissions in Baltimore and Los Angeles\nVehicle Sources (1999 - 2008)") +
     theme(plot.title = element_text(hjust = 0.5)) +
     geom_smooth(
         aes(as.integer(year), Emissions),
         method = "lm",
         se = FALSE,
-        color = "red",
+        color = "black",
         formula = "y ~ x",
         show.legend = FALSE
     )
