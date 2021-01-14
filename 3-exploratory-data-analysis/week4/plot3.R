@@ -46,11 +46,11 @@ if (!any(ls() == "SCC"))
 # PLOT --------------------------------------------------------------------
 ## prepare data frame for ggplot2
 pm25_baltimore <- NEI %>%
-        select(fips, Emissions, type, year) %>%
-        filter(fips == "24510") %>%
-        group_by(year, type) %>%
-        summarize(across(.cols = Emissions, .fns = sum),
-                  .groups = "keep")
+    select(fips, Emissions, type, year) %>%
+    filter(fips == "24510") %>%
+    group_by(year, type) %>%
+    summarize(across(.cols = Emissions, .fns = sum),
+              .groups = "keep")
 pm25_baltimore$year <- factor(pm25_baltimore$year)
 
 ## ggplot2

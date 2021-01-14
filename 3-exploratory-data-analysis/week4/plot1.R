@@ -60,9 +60,28 @@ bar <- barplot(
     xlab = "",
     main = "Total PM2.5 Emissions in the United States\n(1999 - 2008)"
 )
-lines(x = bar, y = lm$fitted.values, lty = 3, lwd = 2, col = "black")
-legend("topright", legend = "Linear Regression", lty = 3, lwd = 2, col = "black", cex = 0.7, bty = "o")
-text(x = bar, y = plot$Emissions - 1.5e6, labels = as.integer(plot$Emissions), cex = 0.8)
+lines(
+    x = bar,
+    y = lm$fitted.values,
+    lty = 3,
+    lwd = 2,
+    col = "black"
+)
+legend(
+    "topright",
+    legend = "Linear Regression",
+    lty = 3,
+    lwd = 2,
+    col = "black",
+    cex = 0.7,
+    bty = "o"
+)
+text(
+    x = bar,
+    y = plot$Emissions - 1.5e6,
+    labels = as.integer(plot$Emissions),
+    cex = 0.8
+)
 dev.off()
 
 ## clean up working environment

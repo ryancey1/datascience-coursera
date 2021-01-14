@@ -44,10 +44,10 @@ if (!any(ls() == "SCC"))
 # PLOT --------------------------------------------------------------------
 # prepare data frame and variables for plot
 plot <- NEI %>%
-        filter(fips == "24510") %>%
-        select(Emissions, year) %>%
-        group_by(year) %>%
-        summarize(across(.fns = sum), .groups = "keep")
+    filter(fips == "24510") %>%
+    select(Emissions, year) %>%
+    group_by(year) %>%
+    summarize(across(.fns = sum), .groups = "keep")
 colors = c("red", "blue", "purple", "green")
 lm <- lm(Emissions ~ year, data = plot)
 
@@ -61,9 +61,28 @@ bar <- barplot(
     xlab = "",
     main = "Total PM2.5 Emissions in Baltimore, MD\n(1999 - 2008)"
 )
-lines(x = bar, y = lm$fitted.values, lty = 3, lwd = 2, col = "black")
-legend("topright", legend = "Linear Regression", lty = 3, lwd = 2, col = "black", cex = 0.7, bty = "o")
-text(x = bar, y = plot$Emissions - 1000, labels = as.integer(plot$Emissions), cex = 0.8)
+lines(
+    x = bar,
+    y = lm$fitted.values,
+    lty = 3,
+    lwd = 2,
+    col = "black"
+)
+legend(
+    "topright",
+    legend = "Linear Regression",
+    lty = 3,
+    lwd = 2,
+    col = "black",
+    cex = 0.7,
+    bty = "o"
+)
+text(
+    x = bar,
+    y = plot$Emissions - 1000,
+    labels = as.integer(plot$Emissions),
+    cex = 0.8
+)
 dev.off()
 
 ## clean up working environment

@@ -51,16 +51,15 @@ SCC_code <- as.character(SCC_coal_comb$SCC)
 filter <- NEI$SCC %in% SCC_code
 
 ## prepare data frame for ggplot2
-NEI %>%
+NEI_SCC <- NEI %>%
     filter(filter == TRUE) %>%
-    group_by(type, year) %>%
-    summarize(across(.cols = Emissions, .fns = sum), .groups = "keep") -> NEI_SCC
+    group_by(year) %>%
+    summarize(across(.cols = Emissions, .fns = sum), .groups = "keep")
 NEI_SCC$year <- factor(NEI_SCC$year)
 
 ## ggplot2
-g <- ggplot(NEI_SCC, aes(year, Emissions, fill = type)) +
+g <- ggplot(NEI_SCC, aes(year, Emissions)) +
     geom_col(show.legend = FALSE) +
-    facet_wrap(. ~ type, scale = "free") +
     ylab("Emissions (tons)") +
     xlab("Years") +
     ggtitle("PM2.5 Emissions in the United States\nCoal Sources (1999 - 2008)") +
