@@ -1,0 +1,28 @@
+---
+title: "INSERT TITLE HERE"
+author: "Ryan Yancey"
+date: "January 20, 2021"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Pre-processing Data
+```{r load-data, cache=TRUE}
+stormData <- read.csv("data/repdata-data-StormData.csv.bz2")
+str(stormData)
+```
+
+```{r pre-process}
+
+```
+
+
+# 1. Across the United States, which types of events (as indicated in the `EVTYPE` variable) are most harmful with respect to population health?
+```{r filter-data}
+
+```

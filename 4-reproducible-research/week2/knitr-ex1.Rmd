@@ -1,0 +1,58 @@
+---
+title: "My First knitr Document"
+author: "Ryan Yancey"
+date: "1/19/2021"
+output: 
+  html_document: 
+    keep_md: yes
+---
+
+```{r set_global, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE, results = "hide")
+```
+
+This is some text (i.e. a "text chunk").
+
+Here is a code chunk
+```{r, echo = TRUE}
+set.seed(1)
+x <- rnorm(100)
+mean(x)
+```
+
+# Chunk names
+
+Code chunks can have names (useful for when making graphics)
+```{r mpg_plot, echo = TRUE}
+library(datasets)
+
+plot(drat ~ mpg, data = mtcars)
+abline(lm(drat ~ mpg, data = mtcars), col = "red")
+```
+
+# In-line computations
+
+We can perform in-line computations as well:
+```{r in_line, echo = TRUE}
+time <- format(Sys.time(), "%a %b %d %X %Y")
+rand <- rnorm(1)
+```
+
+The current time is: **`r time`**. A random number is: **`r rand`**.
+
+# Incorporating graphs
+
+Let's first simulate some data:
+
+```{r simulate_data, echo = TRUE}
+set.seed(1)
+x <- rnorm(100)
+y <- x + rnorm(100, sd = 0.5)
+```
+
+Here is the scatterplot of this simulated data
+```{r scatterplot}
+plot(x, y, main = "My Simulated Data", pch = 19, col = "blue")
+```
+
+
