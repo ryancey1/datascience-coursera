@@ -1,0 +1,464 @@
+---
+title: "Determining the Correlations between Storm Event Type and Impacts to Population Health and Economic Consequence"
+author: "Ryan Yancey"
+date: "February 2021"
+output: 
+  html_document: 
+    toc: yes
+    df_print: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
+```
+
+# Synopsis
+
+The purpose of this markdown is to document the start-to-finish analysis of NOAA's storm data from 1950 to 2011. First, we will ensure that our directory structure is set up correctly, with the correct files downloaded from URLs and in the correct directory. Then, we will begin the long and laborious process of tidying the messy data into something much more pliable for our analysis. Since there is a discrepancy between pre-1993 and post-1993 cataloging styles, we will segment our set before using regex and approximate matching to clean up the messiest part of the data: Event Types. We'll see that the fatalities and injuries data is already logged correctly, so no further processing will be required. Then, we will clean up the property and crop damage variables, as they are split up the number and the suffix (a letter to denote the multiplier of the number). Finally, after all the data is tidied up to our specification, we will answer two core questions:
+
+1. Across the United States, which types of events are most harmful with respect to population health?
+2. Across the United States, which types of events have the greatest economic consequences?
+
+Let's get started.
+
+# Data Processing
+
+## House-keeping
+
+```{r 1-load-libraries, message=FALSE, warning=FALSE}
+library(dplyr)
+library(R.utils)
+library(stringr)
+library(stringdist)
+library(lubridate)
+library(ggplot2)
+library(reshape2)
+```
+
+```{r 2-create-data-directory}
+# create data directory
+if (!dir.exists("data")) {
+        dir.create("data")
+}
+```
+
+Note: the storm events file was self-generated and it is available [here][1]. The data were generated from section **2.1.1 - Storm Data Event Table** in the [StormData-Documentation][2] PDF file.
+
+```{r 3-download-files, message=FALSE, warning=FALSE}
+# data file
+download.file(url = "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2",
+              destfile = "data/repdata-data-StormData.csv.bz2")
+
+# documentation file
+download.file(url = "https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf",
+              destfile = "StormData-Documentation.pdf")
+
+# storm events file -- produced from section 2.1.1 (page 6 of PDF)
+download.file(url = "https://raw.githubusercontent.com/ryancey1/datascience-coursera/main/4-reproducible-research/week4/data/events.txt",
+              destfile = "data/events.txt")
+```
+
+```{r 4-load-data-files, cache = TRUE}
+# read in stormData and eventTypes tables
+stormData <- read.csv("data/repdata-data-StormData.csv.bz2")
+eventTypes <- read.delim("data/events.txt")
+```
+
+## Tidying the data
+
+### Observing our raw `stormData`
+
+First things first, we should quickly look at the structure of the raw data, as well as the head/tail of the loaded table. This will help us to get a feel of the data we want to process.
+
+```{r 5-initial-viewing}
+head(stormData)
+tail(stormData)
+str(stormData)
+summary(stormData)
+head(eventTypes)
+```
+
+### Select and reformat needed columns
+
+Okay, there are _a lot_ of columns we won't need for this analysis. Let's remove those unnecessary columns and then fix the column names to be more readable. We can do the same for the first column in the `eventTypes` data set.
+
+```{r 6-select-columns}
+stormData2 <- stormData %>%
+        select(
+                STATE,
+                BGN_DATE,
+                BGN_TIME,
+                EVTYPE,
+                FATALITIES,
+                INJURIES,
+                PROPDMG,
+                PROPDMGEXP,
+                CROPDMG,
+                CROPDMGEXP
+        ) %>%
+        rename(
+                State = STATE,
+                Date = BGN_DATE,
+                Time = BGN_TIME,
+                Event.Type = EVTYPE,
+                Fatalities = FATALITIES,
+                Injuries = INJURIES,
+                Property.Damage = PROPDMG,
+                Property.Damage.Exponent = PROPDMGEXP,
+                Crop.Damage = CROPDMG,
+                Crop.Damage.Exponent = CROPDMGEXP
+        )
+
+eventTypes <- eventTypes %>%
+        rename(Event.Type = EVTYPE)
+
+str(stormData2)
+str(eventTypes)
+```
+
+### Format the `Date` column
+
+Now that we have columns and column names sorted out, we can begin to address some formatting issues within the entries themselves. For example, the `Date` column contains a "time" format (i.e 0:00:00) but that's not necessary. We'll go ahead and remove that format the entries with lubridate's `mdy()` function. This ensures all the dates are in the YYYY-MM-DD format we will leverage later on.
+
+``` {r 7-remove-time}
+fixed.Dates <- stormData2$Date %>%
+        str_split(pattern = " ", simplify = TRUE)
+stormData2$Date <- mdy(fixed.Dates[,1])
+
+str(stormData2)
+```
+
+### Partition into pre/post-1993 data
+
+Much better. Now, according to [NOAA documentation][3], prior to 1993, only "Tornado", "Thunderstorm Wind", and "Hail" events were recorded and kept part of the StormData documentation. After 1993, however, all 48 event types as indicated in `eventData` were utilized. So, it's probably useful to partition our data into pre-1993 and post-1993 segments to avoid composition bias. We can do this by creating two subsets, one with a date up to and including December 31st, 1992, and all those thereafter.
+
+```{r 8-segment-by-date}
+stormData.pre1993 <- stormData2 %>%
+        filter(Date <= "1992-12-31") %>%
+        arrange(Date, Time)
+stormData.post1993 <- stormData2 %>%
+        filter(Date >= "1993-01-01") %>%
+        arrange(Date, Time)
+```
+
+Let's take a look at the data sets we've generated.
+
+```{r 9-viewing}
+head(stormData.pre1993)
+head(stormData.post1993)
+```
+
+### Formatting event type data
+
+First thing we need to do is ensure the event types are all in the same format. We will choose to have them as fully capitalized words. We'll need to trim the white-space out, too. All of these can be accomplished with the `stringr` package. We can also avoid repetition by defining a function `string_fixer()` to handle all of this.
+
+```{r 10-leading-lagging-spaces}
+# define a function to avoid repetition
+string_fixer <- function(df, col) {
+        df$Event.Type <- df$Event.Type %>%
+                str_to_upper() %>%
+                str_trim() %>%
+                str_squish()
+        return(df)
+}
+
+stormData.pre1993 <- string_fixer(stormData.pre1993)
+stormData.post1993 <- string_fixer(stormData.post1993)
+eventTypes <- string_fixer(eventTypes)
+```
+
+### Handling inconsistent `Event.Type` entries (the bulk of our analysis)
+
+Since most of this data was generated by human-entry, there are a lot of errors and deviations. This whole section is devoted to fixing the Event.Type column, and subsequent sections will address the property and crop damage columns.
+
+#### Pre-1993 Event Types
+
+First, let's focus on the pre-1993 data set. We should only expect three event types in this set (see the Partitioning section for the reason). How many of these entries already match the designated event types formatting? What are the unique entries?
+
+```{r 11-pre-1993-characterizing}
+# let's vectorize the events list for ease of use
+events <- eventTypes$Event.Type
+# how many match this format?
+table(stormData.pre1993$Event.Type %in% events)
+# How many are unique event types?
+length(unique(stormData.pre1993$Event.Type))
+# what is the composition?
+table(stormData.pre1993$Event.Type)
+```
+
+Luckily enough, all of the mismatched entries are due to `THUNDERSTORM` being abbreviated as `TSTM`. We can fix this really easily and quickly and move on to the post-1993 data.
+
+```{r 12-fix-pre-1993}
+stormData.pre1993$Event.Type <- gsub("TSTM", "THUNDERSTORM", stormData.pre1993$Event.Type)
+table(stormData.pre1993$Event.Type %in% events)
+```
+
+#### Post-1993 Event Types
+
+Now we can focus on the harder of the two: Post-1993 event types. Let's quickly assess the work we need to do.
+
+```{r 13-post-1993-characterizing}
+# how many match the format?
+table(stormData.post1993$Event.Type %in% events)
+# How many are unique event types?
+length(unique(stormData.post1993$Event.Type))
+```
+
+There are way more than 3 unique event types in the post-1993 data set. It's not really useful to view how many fall into what category. Regardless, we've got a lot of work to do.
+
+In the pre-1993 data, `THUNDERSTORM` was abbreviated as `TSTM`, in this data **`r sum(grepl("TSTM", stormData.post1993$Event.Type))`** are abbreviated as such. Let's fix that.
+
+```{r 14-fix-post1993-TSTM}
+stormData.post1993$Event.Type <- gsub("TSTM", "THUNDERSTORM", stormData.post1993$Event.Type)
+table(stormData.post1993$Event.Type %in% events)
+```
+
+That one substitution corrected nearly a quarter (**`r round(((40821/175979) * 100), 2)`%**) of the mismatches. Before doing we do a bulk change, let's look at the how many entries still left to fix.
+
+```{r 15-random-entries}
+still_unique <- unique(stormData.post1993$Event.Type[!(stormData.post1993$Event.Type %in% events)])
+head(still_unique)
+length(still_unique)
+```
+
+This makes sense, since we only corrected one word's abbreviation. It would be uncharacteristic of this type of data for such a quick fix to take care of all the issues. Finally, let's take care of the rest of the remaining entries. We'll do this with a for-loop, but this algorithm is not very efficient so it's not advised to do this on a large data set... (verging on $O(n^2)$ if you're a fan of algorithm analysis).
+
+First, let's set vectorize the Event.Type column twice: one that remains unaltered, and another that goes through the algorithm.
+
+```{r 16-vectorize-types}
+pre.alg <- stormData.post1993$Event.Type
+post.alg <- stormData.post1993$Event.Type
+```
+
+This only serves to see how well the algorithm worked. Now let's run the algorithm
+
+```{r 17-bulk-fix}
+for (i in seq_along(events)) {
+        
+        rx <- str_sub(events[i], end = 3)
+        found <- grep(rx, post.alg) # get indices of matches
+        matches <- post.alg[found] # pull those values
+        table <- events[grep(rx, events)] # pull the event names
+        keys <- amatch(matches, table, method = "jw", maxDist = 0.3) # fuzzy match and store the keys
+        
+        # replace EVTYPE with cleaned value
+        for (j in seq_along(keys)) {
+                if (is.na(keys[j])) {
+                        post.alg[found[j]] <- NA
+                }
+                else {
+                        post.alg[found[j]] <- table[keys[j]]
+                }
+        }
+}
+```
+
+The above algorithm performs the following steps:
+
+1. Create a REGEX search by taking the correct event names and removing all but the first 3 characters. (i.e. `THUNDERSTORM WIND` becomes `THU`).
+2. Grab the indices in the event types list of the values that match the regex with the `grep()` function.
+3. Keep the values that match, as well as the event names that match.
+4. Approximately match those values with the `amatch()` function set to the Jaro-Wilker distance metric and store those. *(Those that don't meet the distance metric are replaced with NAs in the keys vector)*
+5. For those that aren't NAs, replace the original name with the matched name. All others should be replaced with NA (this will help later on).
+
+Great. So how did the algorithm perform?
+
+```{r 18-algorithm-analysis}
+summary(pre.alg %in% events)
+summary(post.alg %in% events)
+```
+
+Before the algorithm, `r round(sum(!(pre.alg %in% events))/length(pre.alg) * 100, 2)`% of the events did not match. The algorithm left us with only `r round(sum(!(post.alg %in% events))/length(post.alg) * 100, 2)`% not matching. In addition, only `r round(sum(is.na(post.alg))/length(post.alg) * 100, 2)`% were replaced with `NA` values. The algorithm itself wasn't terribly efficient, but the result is good enough to omit the `NAs` now.
+
+Now we can finally replace the column and omit those with `NAs`.
+
+```{r 19-replace-post-algorithm}
+stormData.post1993$Event.Type <- post.alg
+stormData.post1993 <- stormData.post1993 %>%
+        filter(!is.na(Event.Type)) %>%
+        filter(Event.Type %in% events)
+
+## verify that all the Event.Types are up to par
+summary(stormData.post1993$Event.Type %in% events)
+summary(stormData.pre1993$Event.Type %in% events)
+```
+
+All of them are true, so our cleaning of this column is complete. Now we will append a marker to the end of the table and bind the two data frames.
+
+```{r 20-finish-this-section}
+stormData.post1993$pre.post.1993 <- "After 1993"
+stormData.pre1993$pre.post.1993 <- "Before 1993"
+
+## replace the already existing stormData2 with the new, cleaner data.
+stormData2 <- rbind(stormData.pre1993, stormData.post1993)
+head(stormData2)
+```
+
+### Handling the `Property.Damage` and `Crop.Damage` columns
+
+The property damage and crop damage columns contain the first few digits of the text entry contained within each record, and the "Exponent" column contains the marker for the "place" of the data (i.e M for 'million', K for 'thousand', etc). What does the data look like as of yet in these columns?
+
+```{r 21-propdmg-cropdmg-exps}
+table(stormData2$Property.Damage.Exponent)
+table(stormData2$Crop.Damage.Exponent)
+```
+
+A large majority of these are blank, "K", or "M". Although the B isn't a large majority, it stands for "Billions", so we want to keep those values. We can remove all the others with single number values and punctuation.
+
+```{r 22-remove-punctuation-and-numbers}
+## Property damage cleaning
+stormData2 <- stormData2[-(grep("[[:punct:]]", stormData2$Property.Damage.Exponent)), ]
+stormData2 <- stormData2[-(grep("[0-9]", stormData2$Property.Damage.Exponent)), ]
+stormData2$Property.Damage.Exponent <- str_to_upper(stormData2$Property.Damage.Exponent)
+stormData2$Property.Damage <- as.numeric(stormData2$Property.Damage)
+
+## Crop damage cleaning
+stormData2 <- stormData2[-(grep("[[:punct:]]", stormData2$Crop.Damage.Exponent)), ]
+stormData2 <- stormData2[-(grep("[0-9]", stormData2$Crop.Damage.Exponent)), ]
+stormData2$Crop.Damage.Exponent <- str_to_upper(stormData2$Crop.Damage.Exponent)
+stormData2$Crop.Damage <- as.numeric(stormData2$Crop.Damage)
+
+table(stormData2$Property.Damage.Exponent)
+table(stormData2$Crop.Damage.Exponent)
+
+summary(stormData2)
+```
+
+Okay, so what do blank entries mean?
+
+```{r 23-define-blanks}
+blank.prop <- stormData2[stormData2$Property.Damage.Exponent == "", ]
+table(blank.prop$Property.Damage)
+
+blank.crop <- stormData2[stormData2$Crop.Damage.Exponent == "", ]
+table(blank.crop$Property.Damage)
+```
+
+It appears as though they represent any loss less than `$100` in the Property.Damage column, but they represent any value less than `$1000` in the Crop.Damage column. That being said, it's safe to say that they mean there is no exponential and the dollar value should be taken as is.
+
+Now we can convert the dollar value from the abbreviated form to the long-form.
+
+```{r 24-replace-letters-with-numbers}
+## replace letter-based abbreviations
+stormData2$Property.Damage.Exponent <- stormData2$Property.Damage.Exponent %>%
+        str_replace("H", "100") %>%
+        str_replace("K", "1000") %>%
+        str_replace("M", "1000000") %>%
+        str_replace("B", "1000000000") %>%
+        as.numeric()
+
+## replace NAs with 1s
+stormData2 <- stormData2 %>%
+        mutate(across(Property.Damage.Exponent, ~ifelse(is.na(.), 1, as.numeric(.))))
+
+## replace letter-based abbreviations
+stormData2$Crop.Damage.Exponent <- stormData2$Crop.Damage.Exponent %>%
+        str_replace("H", "100") %>%
+        str_replace("K", "1000") %>%
+        str_replace("M", "1000000") %>%
+        str_replace("B", "1000000000") %>%
+        as.numeric()
+
+## replace NAs with 1s
+stormData2 <- stormData2 %>%
+        mutate(across(Crop.Damage.Exponent, ~ifelse(is.na(.), 1, as.numeric(.))))
+
+## multiply across the columns to calculate the total damage
+stormData2$Property.Damage <- stormData2$Property.Damage * stormData2$Property.Damage.Exponent
+stormData2$Crop.Damage <- stormData2$Crop.Damage * stormData2$Crop.Damage.Exponent
+```
+
+Now that we've finally got the property and crop damage columns formatted, we can move on to generating plots to summarize our data.
+
+# Results
+
+First, we will look at population health, then economic devastation.
+
+## 1. Across the United States, which types of events are most harmful with respect to population health? 
+
+Which events constitute the top 10 in terms of public health devastation? To answer this, we will calculate the average of injuries and fatalities per event.
+
+```{r 25-health-devastating-plot1}
+## summarize health damage
+stormData2.health.norm <- stormData2 %>%
+        group_by(Event.Type) %>%
+        summarize(count = n(), 
+                  Fatality = mean(Fatalities), 
+                  Injury = mean(Injuries), 
+                  TotalHarms = Fatality + Injury) %>%
+        slice_max(order_by = TotalHarms, n = 10)
+
+melted <- melt(stormData2.health.norm, id.vars = c("Event.Type", "count"), variable.name = "Occurrence")
+
+ggplot(subset(melted, Occurrence != "TotalHarms"), aes(y = value, x = reorder(Event.Type, -value), fill = Occurrence)) + 
+        geom_col() + 
+        theme(axis.text.x=element_text(angle = 60, hjust = 1, face = "bold"), 
+              plot.title = element_text(hjust = 0.5, face = "bold"),
+              plot.subtitle = element_text(hjust = 0.5),
+              plot.caption = element_text(face = "italic")) + 
+        ylab("Mean total harm (injuries + fatalities)") + 
+        xlab(NULL) +
+        labs(title = "10 Most Population Devastating Events Across the USA",
+             subtitle = "(1950 - 2011)",
+             caption = "NWS Instruction 10-1605 (2007-08-17)")
+```
+
+**Unsurprisingly, tsunamis and hurricanes cause the highest degree of health devastation due to their massive scale.**
+
+## 2. Across the United States, which types of events have the greatest economic consequences?
+
+Which events constitute the top 10 in terms of economic devastation? To answer this, we will separately calculate the average of property damage and crop damage per event.
+
+### Property Damage
+
+```{r 26-property-devastating-plot2}
+## summarize property damage
+stormData2.econ.norm <- stormData2 %>%
+        group_by(Event.Type) %>%
+        summarize(count = n(), 
+                  Prop.Dmg = sum(Property.Damage)/count) %>%
+        slice_max(order_by = Prop.Dmg, n = 10)
+
+ggplot(stormData2.econ.norm, aes(y = Prop.Dmg/1e6, x = reorder(Event.Type, -Prop.Dmg))) +
+        geom_col() +
+        theme(axis.text.x=element_text(angle = 60, hjust = 1, face = "bold"),
+              plot.title = element_text(hjust = 0.5, face = "bold"),
+              plot.subtitle = element_text(hjust = 0.5),
+              plot.caption = element_text(face = "italic")) +
+        ylab("Mean property damage (USD Millions)") +
+        xlab(NULL) +
+        labs(title = "10 Most Property Devastating Events Across the USA",
+             subtitle = "(1950 - 2011)",
+             caption = "NWS Instruction 10-1605 (2007-08-17)")
+```
+
+**Hurricanes, storm surges and other water-related weather events cause the greatest levels of property damage. This may be likely due to water-damage, and not just devastation.**
+
+### Crop Damage
+
+```{r 27-crop-devastating-plot3}
+## summarize crop damage
+stormData2.econ.norm <- stormData2 %>%
+        group_by(Event.Type) %>%
+        summarize(count = n(), 
+                  Crop.Dmg = sum(Crop.Damage)/count) %>%
+        slice_max(order_by = Crop.Dmg, n = 10)
+
+ggplot(stormData2.econ.norm, aes(y = Crop.Dmg/1e6, x = reorder(Event.Type, -Crop.Dmg))) +
+        geom_col() +
+        theme(axis.text.x=element_text(angle = 60, hjust = 1, face = "bold"),
+              plot.title = element_text(hjust = 0.5, face = "bold"),
+              plot.subtitle = element_text(hjust = 0.5),
+              plot.caption = element_text(face = "italic")) +
+        ylab("Mean Crop Damage (USD Millions)") +
+        xlab(NULL) +
+        labs(title = "10 Most Crop Devastating Events Across the USA",
+             subtitle = "(1950 - 2011)",
+             caption = "NWS Instruction 10-1605 (2007-08-17)")
+```
+
+**Unsurprisingly, droughts are the second greatest cause of crop damage in the United States, and hurricanes/typhoons (with their high wind) cause the most damage.**
+
+[1]: https://raw.githubusercontent.com/ryancey1/datascience-coursera/main/4-reproducible-research/week4/data/events.txt
+[2]: https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf
+[3]: https://www.ncdc.noaa.gov/stormevents/details.jsp?type=eventtype 
