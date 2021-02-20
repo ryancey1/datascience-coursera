@@ -340,7 +340,6 @@ Okay, there are _a lot_ of columns we won't need for this analysis. Let's remove
 ```r
 stormData2 <- stormData %>%
         select(
-                STATE,
                 BGN_DATE,
                 BGN_TIME,
                 EVTYPE,
@@ -352,7 +351,6 @@ stormData2 <- stormData %>%
                 CROPDMGEXP
         ) %>%
         rename(
-                State = STATE,
                 Date = BGN_DATE,
                 Time = BGN_TIME,
                 Event.Type = EVTYPE,
@@ -371,8 +369,7 @@ str(stormData2)
 ```
 
 ```
-## 'data.frame':	902297 obs. of  10 variables:
-##  $ State                   : chr  "AL" "AL" "AL" "AL" ...
+## 'data.frame':	902297 obs. of  9 variables:
 ##  $ Date                    : chr  "4/18/1950 0:00:00" "4/18/1950 0:00:00" "2/20/1951 0:00:00" "6/8/1951 0:00:00" ...
 ##  $ Time                    : chr  "0130" "0145" "1600" "0900" ...
 ##  $ Event.Type              : chr  "TORNADO" "TORNADO" "TORNADO" "TORNADO" ...
@@ -393,6 +390,13 @@ str(eventTypes)
 ##  $ Event.Type: chr  "Astronomical Low Tide " "Avalanche " "Blizzard " "Coastal Flood " ...
 ##  $ Designator: chr  "Z" "Z" "Z" "Z" ...
 ```
+
+Some initial notes to take:
+
+1. We will need to format the `Date` column so that we can sort by dates
+2. All of the number-based values we will compare across the US (`Fatalities`, `Injuries`, `Property.Damage`, and `Crop.Damage`) are already numeric primitives.
+3. A massive overhaul of the `Event.Type` column is desperately needed (human error).
+4. Both `Exponent` columns will need to go through an algorithm to change the multiplier placeholders ("H", "K", "M", "B") to their multiplier value (100, 1000, 1000000, 1000000000 respectively)
 
 ### Format the `Date` column
 
@@ -771,16 +775,12 @@ A large majority of these are blank, "K", or "M". Although the B isn't a large m
 
 ```r
 ## Property damage cleaning
-stormData2 <- stormData2[-(grep("[[:punct:]]", stormData2$Property.Damage.Exponent)), ]
-stormData2 <- stormData2[-(grep("[0-9]", stormData2$Property.Damage.Exponent)), ]
+stormData2 <- stormData2[-(grep("[[:punct:]]|[0-9]", stormData2$Property.Damage.Exponent)), ]
 stormData2$Property.Damage.Exponent <- str_to_upper(stormData2$Property.Damage.Exponent)
-stormData2$Property.Damage <- as.numeric(stormData2$Property.Damage)
 
 ## Crop damage cleaning
-stormData2 <- stormData2[-(grep("[[:punct:]]", stormData2$Crop.Damage.Exponent)), ]
-stormData2 <- stormData2[-(grep("[0-9]", stormData2$Crop.Damage.Exponent)), ]
+stormData2 <- stormData2[-(grep("[[:punct:]]|[0-9]", stormData2$Crop.Damage.Exponent)), ]
 stormData2$Crop.Damage.Exponent <- str_to_upper(stormData2$Crop.Damage.Exponent)
-stormData2$Crop.Damage <- as.numeric(stormData2$Crop.Damage)
 
 table(stormData2$Property.Damage.Exponent)
 ```

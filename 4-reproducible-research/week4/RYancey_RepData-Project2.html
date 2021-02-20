@@ -658,7 +658,6 @@ eventTypes &lt;- read.delim(&quot;data/events.txt&quot;)</code></pre>
 <p>Okay, there are <em>a lot</em> of columns we won’t need for this analysis. Let’s remove those unnecessary columns and then fix the column names to be more readable. We can do the same for the first column in the <code>eventTypes</code> data set.</p>
 <pre class="r"><code>stormData2 &lt;- stormData %&gt;%
         select(
-                STATE,
                 BGN_DATE,
                 BGN_TIME,
                 EVTYPE,
@@ -670,7 +669,6 @@ eventTypes &lt;- read.delim(&quot;data/events.txt&quot;)</code></pre>
                 CROPDMGEXP
         ) %&gt;%
         rename(
-                State = STATE,
                 Date = BGN_DATE,
                 Time = BGN_TIME,
                 Event.Type = EVTYPE,
@@ -686,8 +684,7 @@ eventTypes &lt;- eventTypes %&gt;%
         rename(Event.Type = EVTYPE)
 
 str(stormData2)</code></pre>
-<pre><code>## &#39;data.frame&#39;:    902297 obs. of  10 variables:
-##  $ State                   : chr  &quot;AL&quot; &quot;AL&quot; &quot;AL&quot; &quot;AL&quot; ...
+<pre><code>## &#39;data.frame&#39;:    902297 obs. of  9 variables:
 ##  $ Date                    : chr  &quot;4/18/1950 0:00:00&quot; &quot;4/18/1950 0:00:00&quot; &quot;2/20/1951 0:00:00&quot; &quot;6/8/1951 0:00:00&quot; ...
 ##  $ Time                    : chr  &quot;0130&quot; &quot;0145&quot; &quot;1600&quot; &quot;0900&quot; ...
 ##  $ Event.Type              : chr  &quot;TORNADO&quot; &quot;TORNADO&quot; &quot;TORNADO&quot; &quot;TORNADO&quot; ...
@@ -701,6 +698,13 @@ str(stormData2)</code></pre>
 <pre><code>## &#39;data.frame&#39;:    48 obs. of  2 variables:
 ##  $ Event.Type: chr  &quot;Astronomical Low Tide &quot; &quot;Avalanche &quot; &quot;Blizzard &quot; &quot;Coastal Flood &quot; ...
 ##  $ Designator: chr  &quot;Z&quot; &quot;Z&quot; &quot;Z&quot; &quot;Z&quot; ...</code></pre>
+<p>Some initial notes to take:</p>
+<ol style="list-style-type: decimal">
+<li>We will need to format the <code>Date</code> column so that we can sort by dates</li>
+<li>All of the number-based values we will compare across the US (<code>Fatalities</code>, <code>Injuries</code>, <code>Property.Damage</code>, and <code>Crop.Damage</code>) are already numeric primitives.</li>
+<li>A massive overhaul of the <code>Event.Type</code> column is desperately needed (human error).</li>
+<li>Both <code>Exponent</code> columns will need to go through an algorithm to change the multiplier placeholders (“H”, “K”, “M”, “B”) to their multiplier value (100, 1000, 1000000, 1000000000 respectively)</li>
+</ol>
 </div>
 <div id="format-the-date-column" class="section level3">
 <h3>Format the <code>Date</code> column</h3>
@@ -922,16 +926,12 @@ head(stormData2)</code></pre>
 ## 610132      7     19      1      8     20 281144      1   1955</code></pre>
 <p>A large majority of these are blank, “K”, or “M”. Although the B isn’t a large majority, it stands for “Billions”, so we want to keep those values. We can remove all the others with single number values and punctuation and also convert the character dollar amount in the <code>Crop.Damage</code> and <code>Property.Damage</code> columns to a numeric primitive type.</p>
 <pre class="r"><code>## Property damage cleaning
-stormData2 &lt;- stormData2[-(grep(&quot;[[:punct:]]&quot;, stormData2$Property.Damage.Exponent)), ]
-stormData2 &lt;- stormData2[-(grep(&quot;[0-9]&quot;, stormData2$Property.Damage.Exponent)), ]
+stormData2 &lt;- stormData2[-(grep(&quot;[[:punct:]]|[0-9]&quot;, stormData2$Property.Damage.Exponent)), ]
 stormData2$Property.Damage.Exponent &lt;- str_to_upper(stormData2$Property.Damage.Exponent)
-stormData2$Property.Damage &lt;- as.numeric(stormData2$Property.Damage)
 
 ## Crop damage cleaning
-stormData2 &lt;- stormData2[-(grep(&quot;[[:punct:]]&quot;, stormData2$Crop.Damage.Exponent)), ]
-stormData2 &lt;- stormData2[-(grep(&quot;[0-9]&quot;, stormData2$Crop.Damage.Exponent)), ]
+stormData2 &lt;- stormData2[-(grep(&quot;[[:punct:]]|[0-9]&quot;, stormData2$Crop.Damage.Exponent)), ]
 stormData2$Crop.Damage.Exponent &lt;- str_to_upper(stormData2$Crop.Damage.Exponent)
-stormData2$Crop.Damage &lt;- as.numeric(stormData2$Crop.Damage)
 
 table(stormData2$Property.Damage.Exponent)</code></pre>
 <pre><code>## 
