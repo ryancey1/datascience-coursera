@@ -6,6 +6,7 @@ output:
   html_document: 
     toc: yes
     df_print: default
+    keep_md: yes
 ---
 
 ```{r setup, include=FALSE}
