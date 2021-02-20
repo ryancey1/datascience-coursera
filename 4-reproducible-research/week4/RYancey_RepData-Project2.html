@@ -392,13 +392,13 @@ pre code {
 <h1>Data Processing</h1>
 <div id="house-keeping" class="section level2">
 <h2>House-keeping</h2>
-<pre class="r"><code>library(dplyr)
-library(R.utils)
-library(stringr)
-library(stringdist)
-library(lubridate)
-library(ggplot2)
-library(reshape2)</code></pre>
+<pre class="r"><code>library(&quot;dplyr&quot;)
+library(&quot;R.utils&quot;)
+library(&quot;stringr&quot;)
+library(&quot;stringdist&quot;)
+library(&quot;lubridate&quot;)
+library(&quot;ggplot2&quot;)
+library(&quot;reshape2&quot;)</code></pre>
 <pre class="r"><code># create data directory
 if (!dir.exists(&quot;data&quot;)) {
         dir.create(&quot;data&quot;)
@@ -771,7 +771,7 @@ stormData.post1993 &lt;- stormData2 %&gt;%
 <h3>Formatting event type data</h3>
 <p>First thing we need to do is ensure the event types are all in the same format. We will choose to have them as fully capitalized words. We’ll need to trim the white-space out, too. All of these can be accomplished with the <code>stringr</code> package. We can also avoid repetition by defining a function <code>string_fixer()</code> to handle all of this.</p>
 <pre class="r"><code># define a function to avoid repetition
-string_fixer &lt;- function(df, col) {
+string_fixer &lt;- function(df) {
         df$Event.Type &lt;- df$Event.Type %&gt;%
                 str_to_upper() %&gt;%
                 str_trim() %&gt;%

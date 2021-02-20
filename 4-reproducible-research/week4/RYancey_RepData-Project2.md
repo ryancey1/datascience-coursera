@@ -26,13 +26,13 @@ Let's get started.
 
 
 ```r
-library(dplyr)
-library(R.utils)
-library(stringr)
-library(stringdist)
-library(lubridate)
-library(ggplot2)
-library(reshape2)
+library("dplyr")
+library("R.utils")
+library("stringr")
+library("stringdist")
+library("lubridate")
+library("ggplot2")
+library("reshape2")
 ```
 
 
@@ -491,7 +491,7 @@ First thing we need to do is ensure the event types are all in the same format. 
 
 ```r
 # define a function to avoid repetition
-string_fixer <- function(df, col) {
+string_fixer <- function(df) {
         df$Event.Type <- df$Event.Type %>%
                 str_to_upper() %>%
                 str_trim() %>%
