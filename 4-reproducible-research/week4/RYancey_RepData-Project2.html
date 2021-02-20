@@ -796,7 +796,7 @@ table(stormData.pre1993$Event.Type %in% events)</code></pre>
 length(unique(stormData.pre1993$Event.Type))</code></pre>
 <pre><code>## [1] 3</code></pre>
 <pre class="r"><code># what is the composition?
-table(stormData.pre1993$Event.Type)</code></pre>
+head(table(stormData.pre1993$Event.Type))</code></pre>
 <pre><code>## 
 ##      HAIL   TORNADO TSTM WIND 
 ##     61832     34764     90963</code></pre>
@@ -920,7 +920,7 @@ head(stormData2)</code></pre>
 <pre><code>## 
 ##             ?      0      2      B      k      K      m      M 
 ## 610132      7     19      1      8     20 281144      1   1955</code></pre>
-<p>A large majority of these are blank, “K”, or “M”. Although the B isn’t a large majority, it stands for “Billions”, so we want to keep those values. We can remove all the others with single number values and punctuation.</p>
+<p>A large majority of these are blank, “K”, or “M”. Although the B isn’t a large majority, it stands for “Billions”, so we want to keep those values. We can remove all the others with single number values and punctuation and also convert the character dollar amount in the <code>Crop.Damage</code> and <code>Property.Damage</code> columns to a numeric primitive type.</p>
 <pre class="r"><code>## Property damage cleaning
 stormData2 &lt;- stormData2[-(grep(&quot;[[:punct:]]&quot;, stormData2$Property.Damage.Exponent)), ]
 stormData2 &lt;- stormData2[-(grep(&quot;[0-9]&quot;, stormData2$Property.Damage.Exponent)), ]
@@ -970,7 +970,7 @@ table(stormData2$Property.Damage.Exponent)</code></pre>
 ##                    
 ##                    
 ## </code></pre>
-<p>Okay, so what do blank entries mean?</p>
+<p>Okay, so what do those blank entries mean?</p>
 <pre class="r"><code>blank.prop &lt;- stormData2[stormData2$Property.Damage.Exponent == &quot;&quot;, ]
 table(blank.prop$Property.Damage)</code></pre>
 <pre><code>## 
@@ -1161,31 +1161,32 @@ table(blank.crop$Property.Damage)</code></pre>
 ##      2      2      1      1      1      8      1      1      1      2      1 
 ##    970    971    973    975    979    988    990    995    996 
 ##      1      1      1      2      1      1      1      1      1</code></pre>
-<p>It appears as though they represent any loss less than <code>$100</code> in the Property.Damage column, but they represent any value less than <code>$1000</code> in the Crop.Damage column. That being said, it’s safe to say that they mean there is no exponential and the dollar value should be taken as is.</p>
-<p>Now we can convert the dollar value from the abbreviated form to the long-form.</p>
+<p>It appears as though they represent any loss less than $100 in the <code>Property.Damage</code> column, but they represent any value less than $1000 in the <code>Crop.Damage</code> column. That being said, it’s safe to say that they mean there is no exponential and the dollar value should be taken as is.</p>
+<p>Now we can convert the dollar value from the abbreviated form to the long-form by replacing the letter-based abbreviation with their associated multiplier and the blank spaces with ones. The scheme is as follows:</p>
+<ul>
+<li>&quot;&quot; == 1</li>
+<li>“H” == 100</li>
+<li>“K” == 1000</li>
+<li>“M” == 1000000</li>
+<li>“B” == 1000000000</li>
+</ul>
+<p>This scheme was adapted from a previous student’s work (see <a href="https://rstudio-pubs-static.s3.amazonaws.com/58957_37b6723ee52b455990e149edde45e5b6.html">here</a>). Then, we will convert them to their numeric values and multiplying across the <code>Property.Damage</code> and <code>Property.Damage.Exponent</code> columns, as well as the <code>Crop.Damage</code> and <code>Crop.Damage.Exponent</code> columns to obtain their actual values.</p>
 <pre class="r"><code>## replace letter-based abbreviations
 stormData2$Property.Damage.Exponent &lt;- stormData2$Property.Damage.Exponent %&gt;%
+        str_replace(&quot;[^KMBH]&quot;, &quot;1&quot;) %&gt;%
         str_replace(&quot;H&quot;, &quot;100&quot;) %&gt;%
         str_replace(&quot;K&quot;, &quot;1000&quot;) %&gt;%
         str_replace(&quot;M&quot;, &quot;1000000&quot;) %&gt;%
         str_replace(&quot;B&quot;, &quot;1000000000&quot;) %&gt;%
         as.numeric()
-
-## replace NAs with 1s
-stormData2 &lt;- stormData2 %&gt;%
-        mutate(across(Property.Damage.Exponent, ~ifelse(is.na(.), 1, as.numeric(.))))
 
 ## replace letter-based abbreviations
 stormData2$Crop.Damage.Exponent &lt;- stormData2$Crop.Damage.Exponent %&gt;%
-        str_replace(&quot;H&quot;, &quot;100&quot;) %&gt;%
+        str_replace(&quot;[^KMB]&quot;, &quot;1&quot;) %&gt;%
         str_replace(&quot;K&quot;, &quot;1000&quot;) %&gt;%
         str_replace(&quot;M&quot;, &quot;1000000&quot;) %&gt;%
         str_replace(&quot;B&quot;, &quot;1000000000&quot;) %&gt;%
         as.numeric()
-
-## replace NAs with 1s
-stormData2 &lt;- stormData2 %&gt;%
-        mutate(across(Crop.Damage.Exponent, ~ifelse(is.na(.), 1, as.numeric(.))))
 
 ## multiply across the columns to calculate the total damage
 stormData2$Property.Damage &lt;- stormData2$Property.Damage * stormData2$Property.Damage.Exponent

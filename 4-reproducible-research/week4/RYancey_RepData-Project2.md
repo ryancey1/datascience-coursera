@@ -533,7 +533,7 @@ length(unique(stormData.pre1993$Event.Type))
 
 ```r
 # what is the composition?
-table(stormData.pre1993$Event.Type)
+head(table(stormData.pre1993$Event.Type))
 ```
 
 ```
@@ -766,7 +766,7 @@ table(stormData2$Crop.Damage.Exponent)
 ## 610132      7     19      1      8     20 281144      1   1955
 ```
 
-A large majority of these are blank, "K", or "M". Although the B isn't a large majority, it stands for "Billions", so we want to keep those values. We can remove all the others with single number values and punctuation.
+A large majority of these are blank, "K", or "M". Although the B isn't a large majority, it stands for "Billions", so we want to keep those values. We can remove all the others with single number values and punctuation and also convert the character dollar amount in the `Crop.Damage` and `Property.Damage` columns to a numeric primitive type.
 
 
 ```r
@@ -836,7 +836,7 @@ summary(stormData2)
 ## 
 ```
 
-Okay, so what do blank entries mean?
+Okay, so what do those blank entries mean?
 
 
 ```r
@@ -1041,35 +1041,36 @@ table(blank.crop$Property.Damage)
 ##      1      1      1      2      1      1      1      1      1
 ```
 
-It appears as though they represent any loss less than `$100` in the Property.Damage column, but they represent any value less than `$1000` in the Crop.Damage column. That being said, it's safe to say that they mean there is no exponential and the dollar value should be taken as is.
+It appears as though they represent any loss less than \$100 in the `Property.Damage` column, but they represent any value less than \$1000 in the `Crop.Damage` column. That being said, it's safe to say that they mean there is no exponential and the dollar value should be taken as is.
 
-Now we can convert the dollar value from the abbreviated form to the long-form.
+Now we can convert the dollar value from the abbreviated form to the long-form by replacing the letter-based abbreviation with their associated multiplier and the blank spaces with ones. The scheme is as follows:
+
+* "" == 1
+* "H" == 100
+* "K" == 1000
+* "M" == 1000000
+* "B" == 1000000000
+
+This scheme was adapted from a previous student's work (see [here][4]). Then, we will convert them to their numeric values and multiplying across the `Property.Damage` and `Property.Damage.Exponent` columns, as well as the `Crop.Damage` and `Crop.Damage.Exponent` columns to obtain their actual values.
 
 
 ```r
 ## replace letter-based abbreviations
 stormData2$Property.Damage.Exponent <- stormData2$Property.Damage.Exponent %>%
+        str_replace("[^KMBH]", "1") %>%
         str_replace("H", "100") %>%
         str_replace("K", "1000") %>%
         str_replace("M", "1000000") %>%
         str_replace("B", "1000000000") %>%
         as.numeric()
-
-## replace NAs with 1s
-stormData2 <- stormData2 %>%
-        mutate(across(Property.Damage.Exponent, ~ifelse(is.na(.), 1, as.numeric(.))))
 
 ## replace letter-based abbreviations
 stormData2$Crop.Damage.Exponent <- stormData2$Crop.Damage.Exponent %>%
-        str_replace("H", "100") %>%
+        str_replace("[^KMB]", "1") %>%
         str_replace("K", "1000") %>%
         str_replace("M", "1000000") %>%
         str_replace("B", "1000000000") %>%
         as.numeric()
-
-## replace NAs with 1s
-stormData2 <- stormData2 %>%
-        mutate(across(Crop.Damage.Exponent, ~ifelse(is.na(.), 1, as.numeric(.))))
 
 ## multiply across the columns to calculate the total damage
 stormData2$Property.Damage <- stormData2$Property.Damage * stormData2$Property.Damage.Exponent
@@ -1179,3 +1180,4 @@ ggplot(stormData2.econ.norm, aes(y = Crop.Dmg/1e6, x = reorder(Event.Type, -Crop
 [1]: https://raw.githubusercontent.com/ryancey1/datascience-coursera/main/4-reproducible-research/week4/data/events.txt
 [2]: https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf
 [3]: https://www.ncdc.noaa.gov/stormevents/details.jsp?type=eventtype 
+[4]: https://rstudio-pubs-static.s3.amazonaws.com/58957_37b6723ee52b455990e149edde45e5b6.html
