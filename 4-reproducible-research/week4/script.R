@@ -23,7 +23,7 @@ if (!file.exists("data/repdata-data-StormData.csv.bz2")) {
 }
 
 # document Files
-if (!file.exists("StormData-Documentation.pdf")) {
+if (!file.exists("data/StormData-Documentation.pdf")) {
         download.file(url = "https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf",
                       destfile = "StormData-Documentation.pdf")
 }
@@ -70,13 +70,11 @@ stormData.pre1993$EVTYPE <- stormData.pre1993$EVTYPE %>%
         str_to_upper() %>%
         str_trim() %>%
         str_squish()
-stormData.pre1993 <- arrange(stormData.pre1993, BGN_DATE, BGN_TIME)
 
 stormData.post1993$EVTYPE <- stormData.post1993$EVTYPE %>%
         str_to_upper() %>%
         str_trim() %>%
         str_squish()
-stormData.post1993 <- arrange(stormData.post1993, BGN_DATE, BGN_TIME)
 
 eventTypes$EVTYPE <- eventTypes$EVTYPE %>%
         str_to_upper() %>%
